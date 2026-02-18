@@ -1,0 +1,5 @@
+location         = "westeurope"
+rg_name          = "ch4-r6-rg-prod"
+storage_name     = "prodacct"
+account_tier     = "Premium"
+replication_type = "GRS"

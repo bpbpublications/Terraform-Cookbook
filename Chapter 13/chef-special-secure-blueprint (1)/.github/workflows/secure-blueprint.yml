@@ -1,0 +1,53 @@
+name: Secure Terraform Plan with OPA
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write     # for Azure OIDC
+  contents: read
+
+env:
+  ARM_USE_OIDC: true
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+  ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+  TF_VAR_location:     "eastus"
+
+jobs:
+  plan-and-opa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        run: terraform init -upgrade
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Export Plan JSON
+        run: terraform show -json tfplan > plan.json
+
+      - name: Install conftest (OPA)
+        run: |
+          curl -L https://github.com/open-policy-agent/conftest/releases/download/v0.53.0/conftest_0.53.0_Linux_x86_64.tar.gz \
+          | tar xz
+          sudo mv conftest /usr/local/bin/
+
+      - name: OPA Policy Check
+        run: conftest test -p policy plan.json

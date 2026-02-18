@@ -1,0 +1,63 @@
+name: Terraform Apply - Key Vault Secrets (RBAC)
+on:
+  workflow_dispatch: # Manual trigger; can also use push, PR, schedule
+env:
+  ARM_USE_OIDC: true                       # Use OIDC for authentication
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }} # Service principal w/ role to assign Key Vault RBAC
+  TF_VAR_location: "East US"               # Terraform variable
+permissions:
+  id-token: write   # Required for Azure OIDC login
+  contents: read
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      ############################################################
+      # Step 1: Checkout repository
+      ############################################################
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      ############################################################
+      # Step 2: Azure Login using OIDC
+      ############################################################
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ############################################################
+      # Step 3: Setup Terraform
+      ############################################################
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+      ############################################################
+      # Step 4: Terraform Init
+      ############################################################
+      - name: Terraform Init
+        run: terraform init -upgrade
+      ############################################################
+      # Step 5: Terraform Plan
+      ############################################################
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+      ############################################################
+      # Step 6: Terraform Apply
+      ############################################################
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+      ############################################################
+      # Step 7: Fetch secret from Key Vault at runtime (optional)
+      ############################################################
+      - name: Retrieve DB Password from Key Vault
+        run: |
+          SECRET=$(az keyvault secret show \
+            --vault-name $(terraform output -raw kv_name) \
+            --name db-password \
+            --query value -o tsv)
+          echo "DB_PASSWORD=$SECRET" >> $GITHUB_ENV
+          echo "✅ Secret retrieved securely at runtime."

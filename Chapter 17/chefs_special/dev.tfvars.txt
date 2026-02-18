@@ -1,0 +1,9 @@
+# Rename this file to dev.tfvars (remove .txt from the file name)
+# This is your SSH Public Key. Do not forget to replace following with your public key.
+admin_ssh_public_key = "ssh-rsa AAAA...yourkey... user@host"
+
+# If your region has SKU constraints, set a different VM size
+vmss_sku = "Standard_B4ms"
+
+# Optional: if your region supports zone-redundant DB
+sql_zone_redundant = false

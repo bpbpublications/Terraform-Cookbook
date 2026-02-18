@@ -1,0 +1,37 @@
+#################################################
+# dev.tfvars
+# Purpose: Development overrides for app tier.
+#################################################
+
+region              = "eastus"
+resource_group_name = "rg-ch17-app-tier"
+
+# Use the app subnet from Recipe 1 outputs or the Azure Portal
+# Example:
+# app_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17/subnets/app-subnet"
+app_subnet_id = "/subscriptions/1c29d694-6fa7-425d-9c70-75cd707c6cea/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17/subnets/app-subnet"
+
+# Keep the internal Load Balancer IP inside the app subnet CIDR
+ilb_private_ip = "10.0.2.10"
+
+instance_count     = 2
+vm_sku             = "Standard_D2s_v5" # good general-purpose alternative
+availability_zones = []                # or try ["1","2"] if you want zones
+admin_username     = "azureuser"
+ssh_public_key     = "ssh-rsa.....your shh public key" # paste your SSH public key
+
+app_port = 8080
+
+# UAMI from Recipe 2
+# Example:
+# uami_id = "/subscriptions/<sub>/resourceGroups/rg-ch17-secrets-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uami-ch17-app"
+uami_id = "/subscriptions/1c29d694-6fa7-425d-9c70-75cd707c6cea/resourceGroups/rg-ch17-secrets-identity/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uami-ch17-app"
+
+# Optional Key Vault URI for display
+key_vault_uri = ""
+
+resource_tags = {
+  project     = "terraform-cookbook-capstone"
+  environment = "dev"
+  owner       = "platform-engineering"
+}

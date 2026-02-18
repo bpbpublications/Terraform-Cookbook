@@ -1,0 +1,1 @@
+Deployed storage account tflextlog7h5b6 in RG demo-localexec-rg 

@@ -1,0 +1,41 @@
+#################################################
+# dev.tfvars
+# Purpose: Development overrides for SQL service.
+#################################################
+
+region = "eastus"
+
+# Database region (pick one allowed for SQL in your subscription)
+db_region = "eastus2"
+
+resource_group_name = "rg-ch17-managed-db"
+
+# Use the data subnet for the private endpoint
+# Get values from Recipe 1 outputs or Azure CLI
+# vnet_id = "/subscriptions/<sub>/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17"
+# subnet_id_for_sql_pe = "/subscriptions/<sub>/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17/subnets/data-subnet"
+vnet_id              = "/subscriptions/1c29d694-6fa7-425d-9c70-75cd707c6cea/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17"
+subnet_id_for_sql_pe = "/subscriptions/1c29d694-6fa7-425d-9c70-75cd707c6cea/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17/subnets/data-subnet"
+
+# Keep private endpoint enabled for production-like behavior
+enable_private_endpoint = true
+
+# Key Vault from Recipe 2 (required to store secrets)
+# key_vault_id  = "/subscriptions/<sub>/resourceGroups/rg-ch17-secrets-identity/providers/Microsoft.KeyVault/vaults/kvch17capstone001"
+# key_vault_uri = "https://kvch17capstone001.vault.azure.net/"
+key_vault_id  = "/subscriptions/1c29d694-6fa7-425d-9c70-75cd707c6cea/resourceGroups/rg-ch17-secrets-identity/providers/Microsoft.KeyVault/vaults/kvch17capstone001"
+key_vault_uri = "https://kvch17capstone001.vault.azure.net/"
+
+# Optional: customize names if needed
+sql_server_name   = "sqlsvrch17cap001"
+sql_database_name = "appdb"
+
+# Stay on Business Critical but disable zone redundancy for now
+db_sku_name       = "BC_Gen5_2"
+db_zone_redundant = false
+
+resource_tags = {
+  project     = "terraform-cookbook-capstone"
+  environment = "dev"
+  owner       = "platform-engineering"
+}

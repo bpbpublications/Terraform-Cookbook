@@ -1,0 +1,26 @@
+import "tfplan/v2" as tfplan
+
+# Allowed Azure regions
+allowed_regions = ["eastus", "uksouth"]
+
+# Required tags
+required_tags = ["cost_center", "environment"]
+
+# Identify all Azure Storage Accounts in the plan
+storage_accounts = filter tfplan.resource_changes as _, rc {
+  rc.type is "azurerm_storage_account" and
+  rc.mode is "managed" and
+  (rc.change.actions contains "create" or rc.change.actions contains "update")
+}
+
+# Checks
+region_check = all storage_accounts as _, sa {
+  lower(sa.change.after.location) in allowed_regions
+}
+
+tag_check = all storage_accounts as _, sa {
+  all required_tags as t { sa.change.after.tags contains t }
+}
+
+# Main rule
+main = rule { region_check and tag_check }

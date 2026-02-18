@@ -1,0 +1,1 @@
+VM demo-vm-jet is up and configured. Public IP: 52.224.50.51 

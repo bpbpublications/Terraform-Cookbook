@@ -1,0 +1,35 @@
+#################################################
+# dev.tfvars
+# Purpose: Environment-specific overrides for
+#          development deployment.
+#################################################
+
+region              = "eastus"
+resource_group_name = "rg-ch17-core-network"
+vnet_name           = "vnet-ch17"
+
+# Leave address_space default unless your IP plan requires changes
+address_space = ["10.0.0.0/16"]
+
+# Example subnet CIDRs aligned to the default address space
+subnet_cidrs = {
+  web  = "10.0.1.0/24"
+  app  = "10.0.2.0/24"
+  data = "10.0.3.0/24"
+}
+
+# Open standard web ports at the web tier
+web_allowed_inbound_ports = [80, 443]
+
+# Application tier listens internally on 8080
+app_inbound_port_from_web = 8080
+
+# Database port from app to data (SQL Server example)
+db_inbound_port_from_app = 1433
+
+# Consistent tagging for governance and cost control
+resource_tags = {
+  project     = "terraform-cookbook-capstone"
+  environment = "dev"
+  owner       = "platform-engineering"
+}

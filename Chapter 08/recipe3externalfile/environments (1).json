@@ -1,0 +1,4 @@
+[
+  { "name": "dev",  "owner": "Alice", "cost_center": "CC100" },
+  { "name": "prod", "owner": "Bob",   "cost_center": "CC200" }
+]

@@ -1,0 +1,27 @@
+#################################################
+# dev.tfvars
+# Purpose: Development overrides.
+#################################################
+
+region              = "eastus"
+resource_group_name = "rg-ch17-secrets-identity"
+key_vault_name      = "kvch17capstone001"
+uami_name           = "uami-ch17-app"
+
+# In enterprise environment, enable private endpoint to restrict vault access to private IP by setting it to true, 
+# Set public access on for now by disabling the private endpoint feature in your dev variables for your local development or practices.
+enable_private_endpoint = false
+
+# Supply these from Recipe 1 outputs or set manually
+# Example values shown as comments:
+# vnet_id = "/subscriptions/<sub>/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17"
+# subnet_id_for_kv_pe = "/subscriptions/<sub>/resourceGroups/rg-ch17-core-network/providers/Microsoft.Network/virtualNetworks/vnet-ch17/subnets/data-subnet"
+
+vnet_id             = ""
+subnet_id_for_kv_pe = ""
+
+resource_tags = {
+  project     = "terraform-cookbook-capstone"
+  environment = "dev"
+  owner       = "platform-engineering"
+}

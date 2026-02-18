@@ -1,0 +1,22 @@
+param(
+    [string]$Url
+)
+
+Write-Host "Running smoke test against $Url/health"
+
+for ($i = 1; $i -le 10; $i++) {
+    try {
+        $response = Invoke-WebRequest -Uri "$Url/health" -UseBasicParsing -TimeoutSec 5
+        if ($response.StatusCode -eq 200) {
+            Write-Host "Health check passed."
+            exit 0
+        }
+    }
+    catch {
+        Write-Host "Attempt $i failed, retrying in 5 seconds …"
+        Start-Sleep -Seconds 5
+    }
+}
+
+Write-Error "Health check failed after 10 attempts."
+exit 1

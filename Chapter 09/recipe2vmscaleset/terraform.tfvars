@@ -1,0 +1,15 @@
+resource_group_name        = "rg-chapter9-vmss"
+location                   = "eastus"
+vnet_address_space         = "10.0.0.0/16"
+subnet_prefix              = "10.0.1.0/24"
+public_ip_name             = "pip-vmss-lb"
+lb_name                    = "lb-vmss"
+frontend_ip_configuration_name = "fe-config"
+backend_address_pool_name      = "be-pool"
+vm_size                    = "Standard_B1ms"
+initial_capacity           = 2
+min_capacity               = 1
+max_capacity               = 5
+cpu_threshold              = 75
+admin_username             = "azureuser"
+admin_ssh_public_key_path  = "~/.ssh/id_rsa.pub"

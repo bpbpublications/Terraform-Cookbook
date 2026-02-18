@@ -1,0 +1,5 @@
+location         = "westeurope"
+rg_name          = "ch4-r6-rg-dev"
+storage_name     = "devacct"
+account_tier     = "Standard"
+replication_type = "LRS"

@@ -1,0 +1,126 @@
+<# 
+  install-conftest.ps1
+  Purpose : Download, install, and set PATH for Conftest on Windows
+  Scope   : System-wide PATH (requires running PowerShell as Administrator)
+#>
+
+$ErrorActionPreference = "Stop"
+
+function Assert-Admin {
+  $wi = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $wp = New-Object Security.Principal.WindowsPrincipal($wi)
+  if (-not $wp.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "Please run this script in an elevated PowerShell window (Run as Administrator)."
+  }
+}
+
+function Ensure-Tls {
+  try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  } catch {
+    # Ignore if not supported; modern Windows supports TLS 1.2
+  }
+}
+
+function New-TempFolder {
+  $tempRoot = [IO.Path]::GetTempPath()
+  $folder   = Join-Path $tempRoot ("conftest-" + [guid]::NewGuid())
+  New-Item -ItemType Directory -Path $folder | Out-Null
+  return $folder
+}
+
+function Get-ConftestAssetUrl {
+  Write-Host "Fetching latest Conftest release metadata from GitHub..."
+  $rel = Invoke-RestMethod "https://api.github.com/repos/open-policy-agent/conftest/releases/latest"
+
+  # Match common Windows asset names (case-insensitive):
+  # - conftest_<ver>_Windows_x86_64.zip
+  # - conftest_<ver>_windows_amd64.zip
+  $pattern = '(?i)(windows(_|-)x86_64\.zip|windows_amd64\.zip)$'
+  $asset = $rel.assets | Where-Object { $_.name -match $pattern } | Select-Object -First 1
+
+  if (-not $asset) {
+    throw "Could not find a Windows zip asset in the latest Conftest release."
+  }
+  return @{ Url = $asset.browser_download_url; Name = $asset.name }
+}
+
+function Add-ToSystemPath([string]$folder) {
+  # Read current machine PATH
+  $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  $parts = $machinePath -split ';' | Where-Object { $_ -ne "" }
+
+  if ($parts -notcontains $folder) {
+    $newPath = ($machinePath.TrimEnd(';') + ';' + $folder).TrimStart(';')
+    [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+    Write-Host "✅ Added $folder to system PATH."
+  } else {
+    Write-Host "ℹ️ $folder already present in system PATH."
+  }
+
+  # Also update current session so it works immediately
+  if ( -not (($env:Path -split ';') -contains $folder) ) {
+    $env:Path = $env:Path.TrimEnd(';') + ';' + $folder
+  }
+}
+
+try {
+  Assert-Admin
+  Ensure-Tls
+
+  $work = New-TempFolder
+  $zip  = Join-Path $work "conftest.zip"
+  $out  = Join-Path $work "unzipped"
+
+  # Resolve latest asset URL
+  $assetInfo = Get-ConftestAssetUrl
+  Write-Host ("Downloading {0} ..." -f $assetInfo.Name)
+  Invoke-WebRequest -Uri $assetInfo.Url -OutFile $zip
+
+  Write-Host "Extracting package..."
+  Expand-Archive -Path $zip -DestinationPath $out -Force
+
+  # Locate the binary
+  $exe = Get-ChildItem -Path $out -Recurse -Filter "conftest.exe" | Select-Object -First 1
+  if (-not $exe) { throw "conftest.exe not found after extraction." }
+
+  # Prepare destination folder
+  $tools = "C:\tools"
+  if (-not (Test-Path $tools)) {
+    New-Item -ItemType Directory -Path $tools | Out-Null
+  }
+
+  $dest = Join-Path $tools "conftest.exe"
+
+  # If an older copy exists, replace it
+  if (Test-Path $dest) {
+    try {
+      Remove-Item $dest -Force
+    } catch {
+      throw "Could not replace existing $dest. Close any processes using it and retry."
+    }
+  }
+
+  Move-Item $exe.FullName $dest
+
+  # Add to PATH (system) and current session
+  Add-ToSystemPath -folder $tools
+
+  # Clean up temp
+  Remove-Item $work -Recurse -Force
+
+  # Verify
+  Write-Host "`nVerifying installation..."
+  & $dest --version
+
+  Write-Host "`n✅ Conftest installed successfully at $dest"
+  Write-Host "You can now run:  conftest --version"
+  Write-Host "Example policy test:"
+  Write-Host "  terraform show -json tfplan > plan.json"
+  Write-Host "  conftest test -p policy plan.json"
+
+} catch {
+  Write-Error $_.Exception.Message
+  if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+  exit 1
+}

@@ -1,0 +1,25 @@
+# Set logging for this PowerShell session
+# Important: Replace <you> with your Windows username
+$env:TF_LOG      = "DEBUG"   # Options: INFO, DEBUG, TRACE
+$env:TF_LOG_PATH = "C:\Users\<you>\chapter14\recipe6_debug_logs\terraform-debug.log"
+
+# Optional: make timestamps high resolution
+$env:TF_LOG_TIMESTAMP = "1"
+
+# Run a command to generate log entries
+terraform plan
+
+# Apply to produce additional log lines around state writes and outputs
+terraform apply -auto-approve
+
+# Quick checks
+Write-Host "Log size (bytes): " (Get-Item $env:TF_LOG_PATH).Length
+Write-Host "First 20 lines:"; Get-Content $env:TF_LOG_PATH -TotalCount 20
+Write-Host "Last 20 lines:"; Get-Content $env:TF_LOG_PATH -Tail 20
+
+# Helpful greps using PowerShell Select-String
+# See provider initialization and plugin selection
+Select-String -Path $env:TF_LOG_PATH -Pattern "provider" | Select-Object -First 10
+
+# See HTTP request frames if a cloud provider is involved
+Select-String -Path $env:TF_LOG_PATH -Pattern "Request|Response|Retry" | Select-Object -First 20

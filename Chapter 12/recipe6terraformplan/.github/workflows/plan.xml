@@ -1,0 +1,34 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+
+jobs:
+  terraform:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        terraform plan -no-color > plan.txt
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat plan.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Comment PR with Terraform Plan
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        path: plan.txt

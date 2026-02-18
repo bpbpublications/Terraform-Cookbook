@@ -1,0 +1,113 @@
+name: Recipe 3 — Remote State Locking Demo
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'chapter13/recipe3-state-locking/**'
+
+env:
+  # Terraform uses these for AzureRM auth via OIDC
+  ARM_USE_OIDC: true
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+
+  # Backend values passed during init
+  TF_STATE_RG: ${{ secrets.TF_STATE_RG }}
+  TF_STATE_STORAGE: ${{ secrets.TF_STATE_STORAGE }}
+  TF_STATE_CONTAINER: ${{ vars.TF_STATE_CONTAINER || 'tfstate' }}
+  TF_STATE_KEY: ${{ vars.TF_STATE_KEY || 'chapter13/recipe3/terraform.tfstate' }}
+
+  # Directory containing this recipe
+  WORKDIR: chapter13/recipe3-state-locking
+
+jobs:
+  # Two parallel jobs to demonstrate that one acquires the lock and the other waits
+  apply:
+    name: Apply (parallel locking demo) - ${{ matrix.runner }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [runA, runB]  # Run two applies at the same time
+
+    steps:
+      # 1) Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Azure Login via OIDC
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # 3) Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # 4) Init with backend config supplied from env
+      - name: Terraform Init
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          cat > backend.hcl <<EOF
+          resource_group_name  = "${TF_STATE_RG}"
+          storage_account_name = "${TF_STATE_STORAGE}"
+          container_name       = "${TF_STATE_CONTAINER}"
+          key                  = "${TF_STATE_KEY}"
+          EOF
+          terraform init -backend-config=backend.hcl -upgrade
+
+      # 5) Plan
+      - name: Terraform Plan
+        working-directory: ${{ env.WORKDIR }}
+        run: terraform plan -out=tfplan
+
+      # 6) Apply (use lock-timeout to show waiting behavior rather than failing fast)
+      - name: Terraform Apply (will acquire or wait for lock)
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          # Increase sleep_seconds so the lock remains visible longer in one job.
+          terraform apply -lock-timeout=10m -var="sleep_seconds=75" -auto-approve tfplan
+
+  # Optional cleanup job that runs after both applies complete
+  cleanup:
+    name: Cleanup demo resources
+    runs-on: ubuntu-latest
+    needs: [apply]
+    if: always()  # set to 'manual' by removing or guard by input if you do not want auto destroy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          cat > backend.hcl <<EOF
+          resource_group_name  = "${{ secrets.TF_STATE_RG }}"
+          storage_account_name = "${{ secrets.TF_STATE_STORAGE }}"
+          container_name       = "${{ vars.TF_STATE_CONTAINER || 'tfstate' }}"
+          key                  = "${{ vars.TF_STATE_KEY || 'chapter13/recipe3/terraform.tfstate' }}"
+          EOF
+          terraform init -backend-config=backend.hcl
+
+      - name: Terraform Destroy (optional)
+        working-directory: ${{ env.WORKDIR }}
+        run: terraform destroy -auto-approve

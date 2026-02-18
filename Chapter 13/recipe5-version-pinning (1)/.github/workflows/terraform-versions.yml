@@ -1,0 +1,35 @@
+# .github/workflows/terraform-versions.yml
+name: Terraform Validate (Pinned Versions)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Enforce exact Terraform CLI version
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6     # must match required_version
+
+      # 3) Init without upgrading providers (respect lockfile)
+      - name: Terraform Init (lockfile readonly)
+        run: terraform init -lockfile=readonly
+
+      # 4) Validate syntax and provider schema
+      - name: Terraform Validate
+        run: terraform validate
+
+      # 5) Plan will fail fast if versions mismatch
+      - name: Terraform Plan
+        run: terraform plan -input=false

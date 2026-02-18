@@ -1,0 +1,37 @@
+# Create working folder and files
+# Important - Replace <you> with your Windows username
+mkdir C:\Users\<you>\chapter14\recipe6_debug_logs -Force | Out-Null
+cd C:\Users\<you>\chapter14\recipe6_debug_logs
+ni .\main.tf -Force | Out-Null
+ni .\versions.tf -Force | Out-Null
+
+# Write versions.tf
+@'
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
+  }
+}
+'@ | Set-Content .\versions.tf
+
+# Write main.tf
+@'
+resource "random_string" "sample" {
+  length  = 8
+  upper   = false
+  lower   = true
+  special = false
+  numeric = true
+}
+
+output "sample" {
+  value = random_string.sample.result
+}
+'@ | Set-Content .\main.tf
+
+# Initialize
+terraform init

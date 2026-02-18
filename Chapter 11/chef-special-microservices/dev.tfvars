@@ -1,0 +1,1 @@
+kubeconfig_path = "C:/Users/huzef/.kube/terraform-aks-config"

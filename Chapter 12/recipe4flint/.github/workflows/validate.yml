@@ -1,0 +1,5 @@
+- name: Run TFLint
+  uses: reviewdog/action-tflint@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    reporter: github-pr-check

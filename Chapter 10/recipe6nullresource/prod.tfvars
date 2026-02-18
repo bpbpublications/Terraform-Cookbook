@@ -1,0 +1,1 @@
+endpoint_url = "https://www.example.com"   # replace with your site

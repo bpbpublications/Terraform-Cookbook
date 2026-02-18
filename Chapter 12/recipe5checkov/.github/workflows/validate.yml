@@ -1,0 +1,5 @@
+- name: Checkov Security Scan
+  uses: bridgecrewio/checkov-action@master
+  with:
+    directory: .
+    framework: terraform
